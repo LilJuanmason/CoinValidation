@@ -1,1 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Validador de Monedas y Objetos | IA Gemini</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Fuentes e Iconos -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Encabezado -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo-icon">
+          <i class="fa-solid fa-coins"></i>
+        </div>
+        <div>
+          <h1>Validador de Monedas & Objetos</h1>
+          <p class="subtitle">Detección y conteo inteligente con Visión Artificial IA (Gemini)</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="currency-selector">
+          <label for="currencySelect"><i class="fa-solid fa-globe"></i> Divisa:</label>
+          <select id="currencySelect">
+            <option value="MXN" selected>MXN (Pesos Mexicanos $)</option>
+            <option value="USD">USD (Dólares $)</option>
+            <option value="EUR">EUR (Euros €)</option>
+          </select>
+        </div>
+        <div id="apiKeyBadge" class="badge badge-warning">
+          <i class="fa-solid fa-circle-notch fa-spin"></i> Verificando API...
+        </div>
+      </div>
+    </header>
 
+    <!-- Alerta de configuración de API Key si falta -->
+    <div id="apiAlert" class="alert-banner hidden">
+      <i class="fa-solid fa-triangle-exclamation alert-icon"></i>
+      <div class="alert-text">
+        <strong>¡Atención! Clave de Gemini no detectada.</strong>
+        <span>Edita el archivo <code>.env</code> en la raíz del proyecto y añade tu <code>GEMINI_API_KEY</code> gratuita de <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a>.</span>
+      </div>
+    </div>
+
+    <!-- Contenido Principal en dos columnas -->
+    <main class="main-content">
+      <!-- Columna Izquierda: Cámara y Captura -->
+      <section class="camera-section">
+        <div class="card camera-card">
+          <div class="card-header">
+            <h2><i class="fa-solid fa-camera"></i> Visor de Cámara</h2>
+            <div class="camera-badges">
+              <span id="cameraStatus" class="status-pill status-off">
+                <span class="dot"></span> Inactiva
+              </span>
+            </div>
+          </div>
+
+          <div class="viewport-wrapper">
+            <video id="cameraFeed" autoplay playsinline muted></video>
+            <canvas id="captureCanvas" class="hidden"></canvas>
+            <img id="previewImage" class="preview-img hidden" alt="Captura a procesar">
+            
+            <!-- Overlay de escaneo / carga -->
+            <div id="scannerOverlay" class="scanner-overlay hidden">
+              <div class="scanner-line"></div>
+              <div class="loading-box">
+                <div class="spinner"></div>
+                <p>Gemini Vision analizando escena...</p>
+                <small>Identificando denominaciones y objetos</small>
+              </div>
+            </div>
+
+            <!-- Placeholder cuando la cámara no está iniciada -->
+            <div id="cameraPlaceholder" class="camera-placeholder">
+              <i class="fa-solid fa-camera-rotate placeholder-icon"></i>
+              <p>Presiona <strong>"Iniciar Cámara"</strong> para enfocar las monedas y objetos.</p>
+              <button id="btnStartCameraPlaceholder" class="btn btn-primary">
+                <i class="fa-solid fa-play"></i> Iniciar Cámara
+              </button>
+            </div>
+          </div>
+
+          <!-- Controles de la cámara -->
+          <div class="camera-controls">
+            <div class="control-row-top">
+              <button id="btnToggleCamera" class="btn btn-secondary">
+                <i class="fa-solid fa-video"></i> Iniciar Cámara
+              </button>
+              <button id="btnSwitchCamera" class="btn btn-secondary" title="Cambiar cámara frontal/trasera" disabled>
+                <i class="fa-solid fa-camera-rotate"></i> Cambiar
+              </button>
+              <label class="btn btn-secondary btn-upload" title="O subir una foto guardada">
+                <i class="fa-solid fa-upload"></i> Subir Foto
+                <input type="file" id="fileUpload" accept="image/*" class="hidden">
+              </label>
+            </div>
+
+            <button id="btnCaptureAnalyze" class="btn btn-capture" disabled>
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span>Capturar y Analizar con IA</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tarjeta de Objetos Preestablecidos con Precio -->
+        <div class="card objects-card">
+          <div class="card-header">
+            <div class="header-title-group">
+              <h3><i class="fa-solid fa-tags"></i> Objetos con Precio Preestablecido</h3>
+              <p class="section-desc">Si estos objetos aparecen en la escena, se les asignará este precio fijo.</p>
+            </div>
+            <button id="btnToggleEditObjects" class="btn-text">
+              <i class="fa-solid fa-pen-to-square"></i> Editar Precios
+            </button>
+          </div>
+
+          <div id="objectsList" class="objects-grid">
+            <!-- Renderizado dinámico desde app.js -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Columna Derecha: Resultados y Totales -->
+      <section class="results-section">
+        <!-- Gran Total -->
+        <div class="card total-hero-card">
+          <span class="total-label">VALOR TOTAL CALCULADO</span>
+          <div class="total-amount-wrapper">
+            <span class="total-currency" id="displayCurrencySymbol">$</span>
+            <span class="total-number" id="displayGrandTotal">0.00</span>
+            <span class="total-code" id="displayCurrencyCode">MXN</span>
+          </div>
+          <div class="totals-breakdown">
+            <div class="subtotal-item">
+              <i class="fa-solid fa-coins text-warning"></i>
+              <div>
+                <span class="subtotal-title">Total Monedas</span>
+                <span class="subtotal-val" id="displayCoinsTotal">$0.00</span>
+              </div>
+            </div>
+            <div class="subtotal-divider"></div>
+            <div class="subtotal-item">
+              <i class="fa-solid fa-bag-shopping text-info"></i>
+              <div>
+                <span class="subtotal-title">Total Objetos</span>
+                <span class="subtotal-val" id="displayObjectsTotal">$0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Desglose de Monedas -->
+        <div class="card breakdown-card">
+          <div class="card-header">
+            <h3><i class="fa-solid fa-coins"></i> Monedas Detectadas</h3>
+            <span id="coinsCountBadge" class="counter-badge">0 monedas</span>
+          </div>
+          <div id="coinsContainer" class="items-container">
+            <div class="empty-state">
+              <i class="fa-solid fa-circle-dollar-to-slot"></i>
+              <p>Aún no hay análisis. Coloca monedas frente a la cámara y pulsa "Capturar y Analizar".</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Desglose de Objetos -->
+        <div class="card breakdown-card">
+          <div class="card-header">
+            <h3><i class="fa-solid fa-box-open"></i> Objetos Detectados</h3>
+            <span id="objectsCountBadge" class="counter-badge">0 objetos</span>
+          </div>
+          <div id="detectedObjectsContainer" class="items-container">
+            <div class="empty-state">
+              <i class="fa-solid fa-shapes"></i>
+              <p>Coloca alguno de los objetos predefinidos para asociar su precio automáticamente.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resumen de IA Gemini -->
+        <div class="card summary-card">
+          <div class="card-header">
+            <h3><i class="fa-solid fa-robot"></i> Diagnóstico de la IA</h3>
+          </div>
+          <div class="summary-body" id="aiSummaryText">
+            Esperando primera captura para generar informe detallado con IA.
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Desarrollado con Node.js, Express y Google Gemini API (Multimodal Vision) | Listo para GitHub</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
